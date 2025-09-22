@@ -52,6 +52,22 @@ services:
     networks:
       - collaborative_network
 
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend
+    container_name: collaborative_study_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"  # Frontend accessible at localhost:3000
+    environment:
+      - NODE_ENV=production
+      - REACT_APP_BACKEND_URL=http://localhost:5011  # Points to backend external port
+    depends_on:
+      - flask_backend
+    networks:
+      - collaborative_network
+
 volumes:
   mongodb_data:
 

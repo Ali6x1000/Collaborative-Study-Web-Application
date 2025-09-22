@@ -1,4 +1,4 @@
-FROM python:3.12
+FROM python:3.10.18
 
 WORKDIR /app
 
@@ -13,6 +13,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Upgrade pip + setuptools + wheel (important for numpy/pandas builds)
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+
+# Install numpy first
+RUN pip install --no-cache-dir numpy==1.26.4
 
 RUN apt-get update && apt-get install -y \
     gfortran \
