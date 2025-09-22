@@ -29,7 +29,8 @@ from bson import ObjectId
 from concurrent.futures import ThreadPoolExecutor
 from multiprocessing import Pool
 from concurrent.futures import ProcessPoolExecutor, as_completed
-
+import datetime
+import requests
 # from stats import calc_chi_pvalue
 
 app = Flask(__name__)
@@ -1507,50 +1508,73 @@ def update_collaboration_details(uuid):
 #         logging.error(traceback.format_exc())
 #         return jsonify({'message': 'An error occurred while processing the file', 'error': str(e)}), 500
 
+import requests
+
+# Update the upload endpoints to forward to dataset processor
 @app.route('/api/upload_csv_qc', methods=['POST'])
 def upload_csv_qc():
     try:
-        auth_header = request.headers.get('Authorization')
-        if not auth_header:
-            logging.error("Authorization header missing")
-            return jsonify({"error": "Authorization header missing"}), 401
+        # Authenticate user (keep this in main backend)
+        current_user, error_response = get_current_user()
+        if error_response:
+            return error_response
 
-        token = auth_header.split()[1]
-        current_user = User.verify_auth_token(token)
-
-        if not current_user:
-            logging.error("Invalid token or user not found")
-            return jsonify({"error": "Invalid token or user not found"}), 401
-
-        user_id = current_user.id
-
-        # Get metadata fields from the form data
-        phenotype = request.form.get('phenotype')
-        number_of_samples = request.form.get('number_of_samples')
-
-        if not phenotype or not number_of_samples:
-            return jsonify({"error": "Missing required fields"}), 400
-
-        # Create a new dataset record in the database (without data at this stage)
-        dataset = {
-            "user_id": str(user_id),
-            "phenotype": phenotype,
-            "number_of_samples": number_of_samples,
-            "data": {}  # No data at the moment, will be updated later with CSV
-        }
-
-        # Insert into the database
-        result = db['datasets'].insert_one(dataset)
-        dataset_id = str(result.inserted_id)
-
-        print('Data from frontend:', request.form)
-
-        return jsonify({"message": "Metadata uploaded successfully", "dataset_id": dataset_id}), 200
-
+        # Forward the upload to dataset processor
+        files = {'file': request.files['file']} if 'file' in request.files else {}
+        form_data = dict(request.form)
+        form_data['user_id'] = str(current_user.id)
+        
+        response = requests.post(
+            f'{DATASET_PROCESSOR_URL}/upload/qc-dataset',
+            files=files,
+            data=form_data,
+            timeout=300
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            # Store dataset metadata in MongoDB
+            dataset_id = result.get('dataset_id')
+            store_dataset_metadata(dataset_id, form_data)
+            return jsonify(result), 200
+        else:
+            return jsonify({"error": "Dataset upload failed"}), 500
+            
     except Exception as e:
-        logging.error(f'Unexpected error: {str(e)}')
-        return jsonify({'message': 'An error occurred while processing the metadata', 'error': str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
+@app.route('/api/upload_csv_stats', methods=['POST'])
+def upload_csv_stats():
+    try:
+        current_user, error_response = get_current_user()
+        if error_response:
+            return error_response
+
+        # Forward stats upload to dataset processor
+        files = {'file': request.files['file']} if 'file' in request.files else {}
+        form_data = dict(request.form)
+        form_data['user_id'] = str(current_user.id)
+        
+        response = requests.post(
+            f'{DATASET_PROCESSOR_URL}/upload/stats',
+            files=files,
+            data=form_data,
+            timeout=300
+        )
+        
+        if response.status_code == 200:
+            # Update collaboration with processed stats
+            result = response.json()
+            collaboration_uuid = form_data.get('uuid')
+            update_collaboration_stats(collaboration_uuid, result)
+            return jsonify({"message": "Stats uploaded successfully"}), 200
+        else:
+            return jsonify({"error": "Stats upload failed"}), 500
+            
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+    
 @app.route('/api/update_qc_data', methods=['POST'])
 def update_qc_data():
     try:
@@ -1605,94 +1629,6 @@ def update_qc_data():
         logging.error(f'Error updating dataset with CSV data: {str(e)}')
         return jsonify({"error": "An error occurred while processing the CSV file", "details": str(e)}), 500
 
-
-
-@app.route('/api/upload_csv_stats', methods=['POST'])
-def upload_csv_stats():
-    try:
-        auth_header = request.headers.get('Authorization')
-        if not auth_header:
-            logging.error("Authorization header missing")
-            return jsonify({"error": "Authorization header missing"}), 401
-
-        token = auth_header.split()[1]
-        current_user = User.verify_auth_token(token)
-
-        if not current_user:
-            logging.error("Invalid token or user not found")
-            return jsonify({"error": "Invalid token or user not found"}), 401
-
-        user_id = str(current_user.id)  # Ensure user_id is a string for JSON serialization
-
-        if 'file' not in request.files:
-            logging.error('No file part in the request')
-            return jsonify({'message': 'No file part in the request'}), 400
-
-        file = request.files['file']
-
-        if file.filename == '':
-            logging.error('No selected file')
-            return jsonify({'message': 'No selected file'}), 400
-
-        if not file.filename.endswith('.csv'):
-            logging.error('Unsupported file type')
-            return jsonify({'message': 'Unsupported file type'}), 400
-
-        collaboration_uuid = request.form.get('uuid')
-        if not collaboration_uuid:
-            logging.error("Collaboration UUID missing")
-            return jsonify({"error": "Collaboration UUID missing"}), 400
-
-        try:
-            df = pd.read_csv(file)
-
-            if df.columns[0].lower() != 'snp_id':
-                logging.error('First column must be SNP_ID')
-                return jsonify({'message': 'First column must be SNP_ID'}), 400
-
-            user_stats = {}
-
-            for _, row in df.iterrows():
-                snp_id = row.iloc[0]
-                cases = {}
-                controls = {}
-
-                for col in df.columns[1:]:
-                    if col.lower().startswith('case_'):
-                        case_key = col.split('_')[1]
-                        cases[case_key] = row[col]
-                    elif col.lower().startswith('control_'):
-                        control_key = col.split('_')[1]
-                        controls[control_key] = row[col]
-
-                user_stats[snp_id] = {
-                    "case": cases,
-                    "control": controls,
-                    "user_id": user_id  # Include the user_id with each SNP entry
-                }
-
-            # Update the collaborations entry to add or merge user-specific stats
-            result = db['collaborations'].update_one(
-                {"uuid": collaboration_uuid},
-                {"$set": {f"stats.{user_id}": user_stats}},  # Store data under stats.{user_id}
-                upsert=True
-            )
-
-            if result.matched_count == 0 and not result.upserted_id:
-                logging.error("Collaboration entry not found or not updated")
-                return jsonify({'message': 'Collaboration entry not found or not updated'}), 404
-
-            return jsonify({'message': 'CSV file processed and stats updated successfully'}), 200
-
-        except Exception as e:
-            logging.error(f'Error processing CSV: {str(e)}')
-            logging.error(traceback.format_exc())
-            return jsonify({'message': 'An error occurred while processing the file', 'error': str(e)}), 500
-
-    except Exception as e:
-        logging.error(f'Unexpected error: {str(e)}')
-        logging.error(traceback.format_exc())
-        return jsonify({'message': 'An unexpected error occurred', 'error': str(e)}), 500
 
 
 
@@ -1996,21 +1932,38 @@ def store_qc_results_in_mongo(collab_uuid, results_array, key: str):
 # init qc
 @app.route('/api/datasets/<collab_uuid>', methods=['POST'])
 def initiate_qc(collab_uuid):
+    """
+    Initiate QC analysis by calling dataset processor service
+    """
     try:
         df, threshold = get_combined_datasets(collab_uuid)
-
+        
         if isinstance(df, dict):
             return df
-
-        results = compute_coefficients_array(df)
-
-        if results:
-            store_qc_results_in_mongo(collab_uuid, results, "full_qc")
-
-            return jsonify(results), 200
+        
+        # Prepare data for dataset processor
+        datasets_data = prepare_datasets_for_processor(df)
+        
+        # Call dataset processor service
+        response = requests.post(f'{DATASET_PROCESSOR_URL}/process/qc', 
+                               json={
+                                   'datasets': datasets_data,
+                                   'threshold': threshold
+                               },
+                               timeout=300)
+        
+        if response.status_code == 200:
+            results = response.json()
+            qc_results = results.get('qc_results', [])
+            
+            # Store results in MongoDB
+            if qc_results:
+                store_qc_results_in_mongo(collab_uuid, qc_results, "full_qc")
+            
+            return jsonify(qc_results), 200
         else:
-            return jsonify({"error": "No results returned from compute_coefficients_array."}), 404
-
+            return jsonify({"error": "Dataset processing failed"}), 500
+            
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -2185,26 +2138,62 @@ def calculate_and_store_chi_square_results(collaboration_uuid):
     except Exception as e:
         return {"error": f"Error calculating or storing chi-square results: {str(e)}"}, 500
 
+DATASET_PROCESSOR_URL = os.getenv('DATASET_PROCESSOR_URL', 'http://dataset-processor:5001')
+
 @app.route('/api/calculate_chi_square', methods=['POST'])
 def calculate_chi_square():
+    """
+    Calculate chi-square by calling dataset processor service
+    """
     try:
         data = request.get_json()
-        collaboration_uuid = data.get('uuid')
-
+        collaboration_uuid = data.get('collaboration_uuid')
+        
         if not collaboration_uuid:
-            return jsonify({"error": "UUID is required"}), 400
-
-        result = calculate_and_store_chi_square_results(collaboration_uuid)
-
-        if isinstance(result, tuple) and isinstance(result[0], dict) and isinstance(result[1], int):
-            return jsonify(result[0]), result[1]
-
-        return jsonify({"error": "Unexpected response format"}), 500
-
+            return jsonify({"error": "Collaboration UUID is required"}), 400
+        
+        # Get stats data from MongoDB
+        stats_data = get_stats_data_for_collaboration(collaboration_uuid)
+        
+        # Call dataset processor service
+        response = requests.post(f'{DATASET_PROCESSOR_URL}/process/chi-square',
+                               json={'stats_data': stats_data},
+                               timeout=300)
+        
+        if response.status_code == 200:
+            results = response.json()
+            
+            # Store results in MongoDB
+            store_chi_square_results(collaboration_uuid, results)
+            
+            return jsonify({"message": "Chi-square calculation completed"}), 200
+        else:
+            return jsonify({"error": "Chi-square calculation failed"}), 500
+            
     except Exception as e:
-        print(f"Unexpected error: {str(e)}")
-        return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
+        return jsonify({"error": str(e)}), 500
+
+def prepare_datasets_for_processor(df):
+    """
+    Convert DataFrame to format expected by dataset processor
+    """
+    datasets_data = []
     
+    # Group by user_id
+    for user_id in df.index.get_level_values('user_id').unique():
+        user_data = df.xs(user_id, level='user_id')
+        
+        data_dict = {}
+        for sample_id, row in user_data.iterrows():
+            data_dict[sample_id] = row.to_dict()
+        
+        datasets_data.append({
+            'user_id': user_id,
+            'data': data_dict
+        })
+    
+    return datasets_data
+
 
 @app.route('/api/calculate_chi_square_results/<collab_uuid>', methods=['GET'])
 def get_chi_square_results(collab_uuid):
@@ -2220,6 +2209,76 @@ def get_chi_square_results(collab_uuid):
     except Exception as e:
         print(f"Unexpected error: {str(e)}")
         return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
+
+
+# Add these functions to your app.py file:
+
+def store_dataset_metadata(dataset_id, form_data):
+    """
+    Store dataset metadata in MongoDB
+    """
+    try:
+        user_id = form_data.get('user_id')
+        phenotype = form_data.get('field1')
+        number_of_samples = form_data.get('field2')
+        
+        db['datasets'].insert_one({
+            "dataset_id": dataset_id,
+            "user_id": user_id,
+            "phenotype": phenotype,
+            "number_of_samples": number_of_samples,
+            "created_at": datetime.datetime.utcnow()
+        })
+        
+        logging.info(f"Dataset metadata stored for user {user_id}")
+        
+    except Exception as e:
+        logging.error(f"Error storing dataset metadata: {str(e)}")
+
+def update_collaboration_stats(collaboration_uuid, result):
+    """
+    Update collaboration with processed stats
+    """
+    try:
+        user_stats = result.get('user_stats', {})
+        user_id = result.get('user_id')
+        
+        if user_stats and user_id:
+            db.collaborations.update_one(
+                {"uuid": collaboration_uuid},
+                {"$set": {f"stats.{user_id}": user_stats}}
+            )
+            logging.info(f"Stats updated for collaboration {collaboration_uuid}")
+            
+    except Exception as e:
+        logging.error(f"Error updating collaboration stats: {str(e)}")
+
+def get_stats_data_for_collaboration(collaboration_uuid):
+    """
+    Get stats data for collaboration
+    """
+    try:
+        collaboration = db.collaborations.find_one({"uuid": collaboration_uuid})
+        return collaboration.get('stats', {}) if collaboration else {}
+    except Exception as e:
+        logging.error(f"Error getting stats data: {str(e)}")
+        return {}
+
+def store_chi_square_results(collaboration_uuid, results):
+    """
+    Store chi-square results in MongoDB
+    """
+    try:
+        db.collaborations.update_one(
+            {"uuid": collaboration_uuid},
+            {"$set": {"chi_square_results": results}}
+        )
+        logging.info(f"Chi-square results stored for collaboration {collaboration_uuid}")
+    except Exception as e:
+        logging.error(f"Error storing chi-square results: {str(e)}")
+
+# Add missing imports at the top of the file
+
 
 
 if __name__ == '__main__':

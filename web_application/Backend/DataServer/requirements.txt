@@ -1,0 +1,29 @@
+# Core Flask and web framework
+Flask==2.3.2
+
+# Data processing and scientific computing
+Werkzeug==2.3.6
+pandas==2.2.2   # works with Python 3.12
+numpy==1.26.4   # works with Python 3.12
+
+
+
+
+
+scipy==1.13.1
+
+
+# HTTP requests (for potential future use)
+requests==2.31.0
+
+# Logging and utilities
+python-dotenv==1.0.0
+
+# MongoDB integration (if you add direct MongoDB support)
+pymongo==4.4.1
+dnspython==2.4.2
+
+# Development and testing
+pytest==7.4.0
+pytest-flask==1.2.0
+

@@ -31,7 +31,7 @@ pyrsistent==0.18.1
 PySocks==1.7.1
 python-dateutil==2.6.0
 python-dotenv==0.21.1
-python-Levenshtein==0.20.9
+python-Levenshtein>=0.21.0
 PyYAML==6.0.1
 requests==2.27.1
 selenium==4.8.0

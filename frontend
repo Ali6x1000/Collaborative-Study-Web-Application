@@ -1,0 +1,24 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY web_application/Frontend/package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy source code
+COPY web_application/Frontend/ ./
+
+# Build the application
+RUN npm run build
+
+# Install serve to serve the built application
+RUN npm install -g serve
+
+# Expose port
+EXPOSE 3000
+
+# Serve the built application
+CMD ["serve", "-s", "dist", "-l", "3000"]
