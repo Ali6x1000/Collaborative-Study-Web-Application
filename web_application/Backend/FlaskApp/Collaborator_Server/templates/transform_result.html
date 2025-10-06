@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}Transformation Results{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="alert alert-success">
+            <i class="fas fa-check-circle"></i>
+            <strong>Success!</strong> Data transformation completed successfully.
+        </div>
+
+        <div class="row">
+            <!-- Transformation Summary -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-info-circle"></i> Transformation Summary</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-borderless">
+                            <tr>
+                                <th>Model Used:</th>
+                                <td>{{ model_name }}</td>
+                            </tr>
+                            <tr>
+                                <th>Original Shape:</th>
+                                <td>{{ result.original_shape[0] }} rows × {{ result.original_shape[1] }} columns</td>
+                            </tr>
+                            <tr>
+                                <th>Transformed Shape:</th>
+                                <td>{{ result.transformed_shape[0] }} rows × {{ result.transformed_shape[1] }} columns</td>
+                            </tr>
+                            <tr>
+                                <th>Output File:</th>
+                                <td><code>{{ output_file }}</code></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Download Actions -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-download"></i> Download Results</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <p>Your transformed data is ready for download.</p>
+                        <a href="{{ url_for('download_file', filename=output_file) }}" 
+                           class="btn btn-success btn-lg mb-3">
+                            <i class="fas fa-download"></i> Download CSV File
+                        </a>
+                        <br>
+                        <a href="{{ url_for('list_outputs') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-list"></i> View All Outputs
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Preview -->
+        {% if result.transformed_data_list %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-table"></i> Data Preview (First 10 rows)</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                {% if result.transformed_shape[1] > 2 %}
+                                    <th>ID</th>
+                                    {% for i in range(result.transformed_shape[1] - 1) %}
+                                        <th>PC_{{ i + 1 }}</th>
+                                    {% endfor %}
+                                {% else %}
+                                    {% for i in range(result.transformed_shape[1]) %}
+                                        <th>PC_{{ i + 1 }}</th>
+                                    {% endfor %}
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in result.transformed_data_list[:10] %}
+                            <tr>
+                                {% for value in row %}
+                                <td>{{ "%.4f"|format(value) if value is number else value }}</td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if result.transformed_data_list|length > 10 %}
+                <small class="text-muted">Showing first 10 of {{ result.transformed_data_list|length }} rows.</small>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Privacy Information -->
+        {% if result.noise_params %}
+        <div class="card mt-4">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-shield-alt"></i> Privacy Protection Applied</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Differential privacy noise was added to protect your data.</strong></p>
+                <table class="table table-sm">
+                    <tr>
+                        <th>Epsilon (ε):</th>
+                        <td>{{ result.noise_params.epsilon }}</td>
+                    </tr>
+                    <tr>
+                        <th>Random Seed:</th>
+                        <td>{{ result.noise_params.random_seed or "Not set" }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Next Steps -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-forward"></i> Next Steps</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <a href="{{ url_for('transform_data') }}" class="btn btn-outline-success w-100">
+                            <i class="fas fa-redo"></i> Transform More Data
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <a href="{{ url_for('train_model') }}" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-plus"></i> Train New Model
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <a href="{{ url_for('index') }}" class="btn btn-outline-info w-100">
+                            <i class="fas fa-home"></i> Back to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

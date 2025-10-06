@@ -1,0 +1,23 @@
+services:
+  pca-handler-gui:
+    build: .
+    container_name: pca_handler_gui
+    ports:
+      - "4567:5000"
+    volumes:
+      - ./models:/app/models
+      - ./uploads:/app/uploads
+      - ./outputs:/app/outputs
+      - ./transformed_data1.csv:/app/sample_data1.csv
+      - ./transformed_data2.csv:/app/sample_data2.csv
+      - ./transformed_data3.csv:/app/sample_data3.csv
+    environment:
+      - FLASK_ENV=production
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

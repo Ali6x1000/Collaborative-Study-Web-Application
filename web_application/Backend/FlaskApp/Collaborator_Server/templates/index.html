@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}PCA Handler Dashboard{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="jumbotron bg-primary text-white p-5 rounded mb-4">
+            <h1 class="display-4">
+                <i class="fas fa-chart-line"></i> PCA Handler Dashboard
+            </h1>
+            <p class="lead">
+                Train PCA models, transform data, generate metadata, and manage your machine learning workflow
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Train Model Card -->
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card h-100 border-primary">
+            <div class="card-body text-center">
+                <i class="fas fa-cog fa-3x text-primary mb-3"></i>
+                <h5 class="card-title">Train Model</h5>
+                <p class="card-text">Upload your dataset and train a new PCA model with custom parameters.</p>
+                <a href="{{ url_for('train_model') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Train New Model
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transform Data Card -->
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card h-100 border-success">
+            <div class="card-body text-center">
+                <i class="fas fa-exchange-alt fa-3x text-success mb-3"></i>
+                <h5 class="card-title">Transform Data</h5>
+                <p class="card-text">Apply PCA transformation to new datasets using trained models.</p>
+                <a href="{{ url_for('transform_data') }}" class="btn btn-success">
+                    <i class="fas fa-play"></i> Transform Data
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Generate Metadata Card -->
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card h-100 border-danger">
+            <div class="card-body text-center">
+                <i class="fas fa-database fa-3x text-danger mb-3"></i>
+                <h5 class="card-title">Generate Metadata</h5>
+                <p class="card-text">Generate synthetic metadata with differential privacy and relatedness.</p>
+                <a href="{{ url_for('metadata_generation') }}" class="btn btn-danger">
+                    <i class="fas fa-magic"></i> Generate Metadata
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Models Card -->
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card h-100 border-info">
+            <div class="card-body text-center">
+                <i class="fas fa-list fa-3x text-info mb-3"></i>
+                <h5 class="card-title">Manage Models</h5>
+                <p class="card-text">View, analyze, and manage all your trained PCA models.</p>
+                <a href="{{ url_for('list_models') }}" class="btn btn-info">
+                    <i class="fas fa-eye"></i> View Models
+                    <span class="badge bg-light text-dark ms-1">{{ models|length }}</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Download Outputs Card -->
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card h-100 border-warning">
+            <div class="card-body text-center">
+                <i class="fas fa-download fa-3x text-warning mb-3"></i>
+                <h5 class="card-title">Download Results</h5>
+                <p class="card-text">Access and download all your transformed datasets and results.</p>
+                <a href="{{ url_for('list_outputs') }}" class="btn btn-warning">
+                    <i class="fas fa-folder-open"></i> View Outputs
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Stats -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle"></i> Quick Stats</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-4">
+                        <div class="p-3">
+                            <h3 class="text-primary">{{ models|length }}</h3>
+                            <p class="text-muted">Trained Models</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3">
+                            <h3 class="text-success">Ready</h3>
+                            <p class="text-muted">System Status</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3">
+                            <h3 class="text-info">PCA</h3>
+                            <p class="text-muted">Analysis Type</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Models -->
+{% if models %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-history"></i> Available Models</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for model in models[:6] %}
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card border-0 bg-light">
+                            <div class="card-body p-3">
+                                <h6 class="card-title">
+                                    <i class="fas fa-cube text-primary"></i> 
+                                    {{ model }}
+                                </h6>
+                                <a href="{{ url_for('model_info', model_name=model) }}" class="btn btn-sm btn-outline-primary">
+                                    View Details
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                {% if models|length > 6 %}
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('list_models') }}" class="btn btn-outline-primary">
+                        View All {{ models|length }} Models
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

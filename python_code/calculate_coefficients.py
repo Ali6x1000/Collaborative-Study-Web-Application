@@ -1,4 +1,4 @@
- email import parser
+from email import parser
 import numpy as np 
 import pandas as pd
 import itertools

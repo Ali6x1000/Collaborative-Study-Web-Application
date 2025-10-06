@@ -1,6 +1,6 @@
-# Collaborator Server - PCA Handler
+# Collaborator Server - PCA Handler with Docker GUI
 
-This folder contains the **fully consolidated** PCA (Principal Component Analysis) handler for the Collaborator Server.
+This folder contains the **fully consolidated** PCA (Principal Component Analysis) handler for the Collaborator Server, now with a **web-based GUI** and **Docker containerization**.
 
 ## Files
 
@@ -18,7 +18,89 @@ This folder contains the **fully consolidated** PCA (Principal Component Analysi
 ✅ **Model Management**: List models, get info, clear cache  
 ✅ **Flexible Input**: Accept data files or DataFrames  
 ✅ **Error Handling**: Comprehensive error handling and logging  
-✅ **Self-Contained**: No external dependencies
+✅ **Self-Contained**: No external dependencies  
+✅ **Web-Based GUI**: Intuitive interface for PCA operations  
+✅ **Dockerized**: Easy deployment and scaling  
+
+## 🚀 Quick Start with Docker
+
+### Method 1: Docker Compose (Recommended)
+
+```bash
+# Navigate to the directory
+cd /Users/alinawaf/Desktop/Erman/Collaborative-Study-Web-Application/web_application/Backend/FlaskApp/Collaborator_Server
+
+# Build and start the container
+docker-compose up --build
+
+# Access the GUI at http://localhost:5000
+```
+
+### Method 2: Docker Build & Run
+
+```bash
+# Build the Docker image
+docker build -t pca-handler-gui .
+
+# Run the container
+docker run -p 5000:5000 \
+  -v $(pwd)/models:/app/models \
+  -v $(pwd)/uploads:/app/uploads \
+  -v $(pwd)/outputs:/app/outputs \
+  pca-handler-gui
+
+# Access the GUI at http://localhost:5000
+```
+
+## 📁 Files Structure
+
+```
+Collaborator_Server/
+├── 🐳 Dockerfile                  # Container configuration
+├── 🐳 docker-compose.yml          # Multi-service setup  
+├── 📋 requirements.txt            # Python dependencies
+├── 🌐 gui_app.py                  # Flask web GUI application
+├── 🔧 pca_handler.py             # Core PCA functionality
+├── 🧪 test_pca_handler.py        # Test script
+├── 📊 transformed_data*.csv       # Sample datasets
+├── 📖 README.md                   # This documentation
+└── templates/                     # HTML templates
+    ├── base.html                  # Base template
+    ├── index.html                 # Dashboard
+    ├── train.html                 # Model training
+    ├── transform.html             # Data transformation
+    ├── models.html               # Models listing
+    └── outputs.html              # Results download
+```
+
+## 🌐 Web GUI Features
+
+### 🏠 Dashboard (`/`)
+- **Overview**: System status and quick stats
+- **Navigation**: Access to all features
+- **Quick Actions**: Train, transform, view models
+
+### 🔧 Train Models (`/train`)
+- **Upload CSV**: Drag & drop data files
+- **Configure**: Set model name and components
+- **Progress**: Real-time training feedback
+- **Results**: Model info and statistics
+
+### 🔄 Transform Data (`/transform`)
+- **Model Selection**: Choose from trained models
+- **Data Upload**: Upload files to transform
+- **Privacy Options**: Add differential privacy noise
+- **Download**: Get transformed results instantly
+
+### 📊 Manage Models (`/models`)
+- **List Models**: View all trained models
+- **Model Details**: Components, variance explained
+- **Performance**: Training statistics and info
+
+### 📥 Download Results (`/outputs`)
+- **File Browser**: All transformed datasets
+- **One-Click Download**: Get CSV files instantly
+- **File Info**: Size and metadata
 
 ## Quick Start
 
@@ -224,22 +306,157 @@ This dataset contains genetic variant data suitable for PCA dimensionality reduc
 ✅ **Better Organization**: Everything logically grouped in class  
 ✅ **Easier Debugging**: All functionality in one place  
 ✅ **Reduced Complexity**: Simpler architecture  
-✅ **Self-Contained**: Can be moved or copied easily
+✅ **Self-Contained**: Can be moved or copied easily  
 
-## Architecture
+## 🔒 Privacy Features
 
-The fully consolidated design includes:
+### Differential Privacy
+- **Laplacian Noise**: Added to transformed data
+- **Configurable Epsilon**: Control privacy-utility tradeoff
+- **Reproducible**: Set random seed for consistent results
 
-1. **PCAHandler Class**: Contains all PCA functionality
+### Usage Example
+```python
+# Transform with privacy protection
+result = transform_data_handler(
+    model_name="my_model",
+    data_file="data.csv",
+    add_noise=True,      # Enable differential privacy
+    epsilon=1.0,         # Privacy parameter
+    random_seed=42       # For reproducibility
+)
+```
 
-   - `train_pca()`: Complete training logic
-   - `load_pca_model()`: Loading with caching
-   - `transform_data()`: Complete transformation logic
-   - `get_model_info()`: Model information
-   - `list_models()`: Model management
-   - `clear_cache()`: Cache management
+## 🐳 Docker Benefits
 
-2. **Convenience Functions**: Simple wrappers around class methods
-3. **Global Instance**: Pre-configured handler for immediate use
+✅ **Isolated Environment**: No dependency conflicts  
+✅ **Consistent Deployment**: Same environment everywhere  
+✅ **Easy Scaling**: Run multiple instances  
+✅ **Volume Persistence**: Data persists across restarts  
+✅ **Health Monitoring**: Built-in health checks  
+✅ **Production Ready**: Optimized for deployment  
 
-This design eliminates ALL redundancy while maintaining full functionality!
+## 📋 Container Management
+
+### Check Container Status
+```bash
+docker-compose ps
+```
+
+### View Logs
+```bash
+docker-compose logs -f
+```
+
+### Stop Container
+```bash
+docker-compose down
+```
+
+### Restart Container
+```bash
+docker-compose restart
+```
+
+### Update Container
+```bash
+docker-compose down
+docker-compose up --build
+```
+
+## 🔧 Environment Variables
+
+Configure the container with environment variables:
+
+```yaml
+environment:
+  - FLASK_ENV=production        # Flask environment
+  - PYTHONUNBUFFERED=1         # Python output buffering
+  - MAX_UPLOAD_SIZE=100        # Max file size in MB
+```
+
+## 📁 Volume Mounts
+
+The container mounts these directories:
+
+- `./models` → `/app/models` - Trained PCA models
+- `./uploads` → `/app/uploads` - Uploaded data files  
+- `./outputs` → `/app/outputs` - Transformed results
+- `./transformed_data*.csv` → Sample datasets
+
+## 🚀 Production Deployment
+
+### AWS/Cloud Deployment
+```bash
+# Build for production
+docker build -t pca-handler:latest .
+
+# Tag for registry
+docker tag pca-handler:latest your-registry/pca-handler:latest
+
+# Push to registry
+docker push your-registry/pca-handler:latest
+```
+
+### Kubernetes Deployment
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pca-handler-gui
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: pca-handler
+  template:
+    metadata:
+      labels:
+        app: pca-handler
+    spec:
+      containers:
+      - name: pca-handler
+        image: your-registry/pca-handler:latest
+        ports:
+        - containerPort: 5000
+```
+
+## 🆘 Troubleshooting
+
+### Port Already in Use
+```bash
+# Find process using port 5000
+lsof -i :5000
+
+# Kill process if needed
+kill -9 <PID>
+
+# Or use different port
+docker run -p 8080:5000 pca-handler-gui
+```
+
+### Permission Issues
+```bash
+# Fix file permissions
+chmod -R 755 models uploads outputs
+
+# Or run with user mapping
+docker run --user $(id -u):$(id -g) -p 5000:5000 pca-handler-gui
+```
+
+### Memory Issues
+```bash
+# Increase Docker memory limit
+# Or clear model cache via GUI
+curl -X POST http://localhost:5000/api/clear_cache
+```
+
+## 🎯 Next Steps
+
+1. **Access GUI**: Open http://localhost:5000
+2. **Upload Data**: Try the sample datasets
+3. **Train Model**: Create your first PCA model  
+4. **Transform Data**: Apply PCA to new datasets
+5. **Download Results**: Get transformed CSV files
+
+The containerized PCA Handler provides a complete, production-ready solution for PCA analysis with an intuitive web interface!

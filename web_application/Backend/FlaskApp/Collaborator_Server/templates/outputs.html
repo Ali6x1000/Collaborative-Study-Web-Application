@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Output Files{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-download"></i> Output Files</h2>
+        <p class="text-muted">Download your transformed datasets and results</p>
+
+        {% if files %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th><i class="fas fa-file"></i> Filename</th>
+                        <th><i class="fas fa-weight-hanging"></i> Size</th>
+                        <th><i class="fas fa-cogs"></i> Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for file in files %}
+                    <tr>
+                        <td>
+                            <i class="fas fa-file-csv text-success"></i>
+                            {{ file.filename }}
+                        </td>
+                        <td>{{ file.size_mb }} MB</td>
+                        <td>
+                            <a href="{{ url_for('download_file', filename=file.filename) }}" 
+                               class="btn btn-sm btn-success">
+                                <i class="fas fa-download"></i> Download
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-folder-open fa-4x text-muted mb-3"></i>
+            <h4 class="text-muted">No Output Files</h4>
+            <p class="text-muted">Transform some data to see results here</p>
+            <a href="{{ url_for('transform_data') }}" class="btn btn-success">
+                <i class="fas fa-exchange-alt"></i> Transform Data
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

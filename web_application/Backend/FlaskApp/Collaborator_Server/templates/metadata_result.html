@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metadata Generation Result - PCA Handler</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .success { background-color: #d4edda; color: #155724; padding: 15px; border-radius: 5px; margin-bottom: 20px; border: 1px solid #c3e6cb; }
+        .parameter-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .parameter-table th, .parameter-table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        .parameter-table th { background-color: #f8f9fa; }
+        .button { display: inline-block; background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-right: 10px; }
+        .button:hover { background-color: #218838; }
+        .secondary-button { background-color: #6c757d; }
+        .secondary-button:hover { background-color: #5a6268; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Metadata Generation Complete</h1>
+        
+        <div class="success">
+            ✅ Metadata generation completed successfully!
+        </div>
+
+        <h2>Generation Parameters</h2>
+        <table class="parameter-table">
+            <tr>
+                <th>Parameter</th>
+                <th>Value</th>
+            </tr>
+            <tr>
+                <td>Random Seed</td>
+                <td>{{ parameters.seed }}</td>
+            </tr>
+            <tr>
+                <td>Epsilon (Privacy Parameter)</td>
+                <td>{{ parameters.eps }}</td>
+            </tr>
+            <tr>
+                <td>Synthetic Samples Generated</td>
+                <td>{{ parameters.num_synthetic_samples }}</td>
+            </tr>
+            <tr>
+                <td>Existing Samples Combined</td>
+                <td>{{ parameters.num_existing_samples_to_combine }}</td>
+            </tr>
+        </table>
+
+        <h2>Output File</h2>
+        <p><strong>File:</strong> {{ output_file }}</p>
+
+        <div style="margin-top: 30px;">
+            <a href="/download/{{ output_file }}" class="button">Download Result</a>
+            <a href="/metadata" class="button secondary-button">Generate Another</a>
+            <a href="/outputs" class="button secondary-button">View All Outputs</a>
+            <a href="/" class="button secondary-button">Back to Home</a>
+        </div>
+    </div>
+</body>
+</html>

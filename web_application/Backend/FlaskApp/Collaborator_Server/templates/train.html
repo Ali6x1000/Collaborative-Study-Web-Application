@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Train PCA Model{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-cog"></i> Train New PCA Model
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    <!-- Model Name -->
+                    <div class="mb-3">
+                        <label for="model_name" class="form-label">
+                            <i class="fas fa-tag"></i> Model Name
+                        </label>
+                        <input type="text" class="form-control" id="model_name" name="model_name" 
+                               placeholder="e.g., my_pca_model" required>
+                        <div class="form-text">Choose a unique name for your PCA model</div>
+                    </div>
+
+                    <!-- Data File Upload -->
+                    <div class="mb-3">
+                        <label for="data_file" class="form-label">
+                            <i class="fas fa-file-csv"></i> Training Dataset
+                        </label>
+                        <input type="file" class="form-control" id="data_file" name="data_file" 
+                               accept=".csv,.txt" required>
+                        <div class="form-text">Upload a CSV file with your training data</div>
+                    </div>
+
+                    <!-- Number of Components -->
+                    <div class="mb-3">
+                        <label for="n_components" class="form-label">
+                            <i class="fas fa-sliders-h"></i> Number of Components
+                        </label>
+                        <input type="text" class="form-control" id="n_components" name="n_components" 
+                               value="2" placeholder="2 or 0.95">
+                        <div class="form-text">
+                            Enter integer (e.g., 2) for exact components or decimal (e.g., 0.95) for variance ratio
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-play"></i> Train Model
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Information Card -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle"></i> Training Information</h5>
+            </div>
+            <div class="card-body">
+                <h6>Data Requirements:</h6>
+                <ul>
+                    <li>CSV format with numeric data</li>
+                    <li>First column will be preserved as ID column</li>
+                    <li>All other numeric columns will be used for PCA</li>
+                    <li>Missing values will be filled with column means</li>
+                </ul>
+
+                <h6>Component Selection:</h6>
+                <ul>
+                    <li><strong>Integer:</strong> Exact number of components (e.g., 2, 5, 10)</li>
+                    <li><strong>Decimal:</strong> Variance ratio to preserve (e.g., 0.95 = 95%)</li>
+                </ul>
+
+                <h6>Model Output:</h6>
+                <ul>
+                    <li>Trained PCA model saved as .pkl file</li>
+                    <li>Model includes scaler and feature information</li>
+                    <li>Can be used for transforming new datasets</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('data_file').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const fileSize = (file.size / 1024 / 1024).toFixed(2);
+        console.log(`Selected file: ${file.name} (${fileSize} MB)`);
+    }
+});
+</script>
+{% endblock %}

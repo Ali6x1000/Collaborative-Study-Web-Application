@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}Transform Data{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-exchange-alt"></i> Transform Data with PCA
+                </h4>
+            </div>
+            <div class="card-body">
+                {% if not models %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    No trained models available. Please <a href="{{ url_for('train_model') }}">train a model</a> first.
+                </div>
+                {% else %}
+                <form method="POST" enctype="multipart/form-data" id="transformForm">
+                    <!-- Model Selection -->
+                    <div class="mb-3">
+                        <label for="model_name" class="form-label">
+                            <i class="fas fa-cube"></i> Select PCA Model
+                        </label>
+                        <select class="form-select" id="model_name" name="model_name" required>
+                            <option value="">Choose a trained model...</option>
+                            {% for model in models %}
+                            <option value="{{ model }}">{{ model }}</option>
+                            {% endfor %}
+                        </select>
+                        <div id="modelInfo" class="mt-2" style="display: none;">
+                            <div class="alert alert-info">
+                                <strong>Model Requirements:</strong>
+                                <div id="modelDetails">Select a model to see its requirements...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Data File Upload -->
+                    <div class="mb-3">
+                        <label for="data_file" class="form-label">
+                            <i class="fas fa-file-csv"></i> Data to Transform
+                        </label>
+                        <input type="file" class="form-control" id="data_file" name="data_file" 
+                               accept=".csv,.txt" required>
+                        <div class="form-text">Upload CSV file with data to transform</div>
+                        <div id="fileInfo" class="mt-2" style="display: none;">
+                            <small class="text-muted">Selected file: <span id="fileName"></span> (<span id="fileSize"></span>)</small>
+                        </div>
+                    </div>
+
+                    <!-- Privacy Options -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-shield-alt"></i> Privacy Protection (Optional)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="add_noise" name="add_noise">
+                                <label class="form-check-label" for="add_noise">
+                                    Add Differential Privacy Noise
+                                </label>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="epsilon" class="form-label">Epsilon (ε)</label>
+                                    <input type="number" class="form-control" id="epsilon" name="epsilon" 
+                                           value="1.0" step="0.1" min="0.1">
+                                    <div class="form-text">Privacy parameter (lower = more private)</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="random_seed" class="form-label">Random Seed</label>
+                                    <input type="number" class="form-control" id="random_seed" name="random_seed" 
+                                           placeholder="42">
+                                    <div class="form-text">For reproducible results (optional)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="fas fa-play"></i> Transform Data
+                        </button>
+                    </div>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Information Card -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle"></i> Important Notes</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <strong><i class="fas fa-exclamation-triangle"></i> Data Compatibility:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>Your data must have the <strong>same structure</strong> as the training data</li>
+                        <li>Same number of numeric columns (excluding first ID column)</li>
+                        <li>If features don't match, please train a new model with your data</li>
+                    </ul>
+                </div>
+                
+                <h6>Data Processing:</h6>
+                <ul>
+                    <li>First column preserved as identifier</li>
+                    <li>Data standardized using training scaler</li>
+                    <li>PCA transformation applied</li>
+                    <li>Results saved to outputs folder</li>
+                </ul>
+
+                <h6>Privacy Protection:</h6>
+                <ul>
+                    <li><strong>Laplacian Noise:</strong> Added for differential privacy</li>
+                    <li><strong>Epsilon:</strong> Controls privacy-utility tradeoff</li>
+                    <li><strong>Lower Epsilon:</strong> More private, less accurate</li>
+                    <li><strong>Higher Epsilon:</strong> Less private, more accurate</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Enable/disable privacy options based on checkbox
+document.getElementById('add_noise').addEventListener('change', function() {
+    const epsilonInput = document.getElementById('epsilon');
+    const seedInput = document.getElementById('random_seed');
+    
+    epsilonInput.disabled = !this.checked;
+    seedInput.disabled = !this.checked;
+});
+
+// Show file info when file is selected
+document.getElementById('data_file').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    
+    if (file) {
+        const sizeInMB = (file.size / 1024 / 1024).toFixed(2);
+        fileName.textContent = file.name;
+        fileSize.textContent = sizeInMB + ' MB';
+        fileInfo.style.display = 'block';
+    } else {
+        fileInfo.style.display = 'none';
+    }
+});
+
+// Show model info when model is selected
+document.getElementById('model_name').addEventListener('change', function() {
+    const modelName = this.value;
+    const modelInfo = document.getElementById('modelInfo');
+    const modelDetails = document.getElementById('modelDetails');
+    
+    if (modelName) {
+        // Fetch model info via AJAX
+        fetch(`/model/${modelName}`)
+            .then(response => response.text())
+            .then(html => {
+                // Extract model info from response (simplified)
+                modelDetails.innerHTML = `
+                    <strong>Model:</strong> ${modelName}<br>
+                    <strong>Note:</strong> Ensure your data has the same structure as the training data.<br>
+                    <a href="/model/${modelName}" target="_blank">View full model details</a>
+                `;
+                modelInfo.style.display = 'block';
+            })
+            .catch(error => {
+                modelDetails.innerHTML = `<strong>Model:</strong> ${modelName}<br><em>Click to view details</em>`;
+                modelInfo.style.display = 'block';
+            });
+    } else {
+        modelInfo.style.display = 'none';
+    }
+});
+
+// Initial state
+document.addEventListener('DOMContentLoaded', function() {
+    const addNoise = document.getElementById('add_noise');
+    if (!addNoise.checked) {
+        document.getElementById('epsilon').disabled = true;
+        document.getElementById('random_seed').disabled = true;
+    }
+});
+</script>
+{% endblock %}
