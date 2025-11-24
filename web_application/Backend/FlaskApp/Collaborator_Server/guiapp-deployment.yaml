@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pca-gui-app
+  labels:
+    app: pca-gui-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pca-gui-app
+  template:
+    metadata:
+      labels:
+        app: pca-gui-app
+    spec:
+      containers:
+      - name: pca-gui-app
+        image: pca-gui-app:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 5000
+        env:
+        - name: FLASK_ENV
+          value: "production"
+        - name: FLASK_APP
+          value: "gui_app.py"
+        volumeMounts:
+        - name: uploads-volume
+          mountPath: /app/uploads
+        - name: outputs-volume
+          mountPath: /app/outputs
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: uploads-volume
+        emptyDir: {}
+      - name: outputs-volume
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pca-gui-app-service
+  labels:
+    app: pca-gui-app
+spec:
+  type: NodePort
+  ports:
+  - port: 80
+    targetPort: 5000
+    protocol: TCP
+    nodePort: 30000
+  selector:
+    app: pca-gui-app

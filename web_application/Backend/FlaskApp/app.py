@@ -2,7 +2,7 @@ import traceback
 
 from pandas import DataFrame
 import numpy as np
-from flask import Flask, request, jsonify, g
+from flask import Flask, render_template, request, jsonify, g
 from flask_login import LoginManager, login_user, logout_user, UserMixin
 from flask_cors import CORS
 from importlib_metadata import metadata
@@ -29,18 +29,19 @@ from stats import calc_chi_pvalue
 from concurrent.futures import ThreadPoolExecutor
 from multiprocessing import Pool
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from TrainPCA import train_pca_model, load_pca_model, transform_data_with_pca
-from sklearn.metrics import pairwise_distances
 
+# from TrainPCA import train_pca_model, load_pca_model, transform_data_with_pca
+from sklearn.metrics import pairwise_distances
+import requests
 
 # from stats import calc_chi_pvalue
-
+# from stats import calc_chi_pvalue
 app = Flask(__name__)
 load_dotenv(find_dotenv())
 auth = HTTPBasicAuth()
 
 app.config["MONGO_URI"] = os.getenv("MONGO_URI")
-app.config["PORT"] = os.getenv("PORT")
+app.config["PORT"] = 5000
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 CORS(app)  # Initialize CORS
 logging.basicConfig(level=logging.INFO)
@@ -2411,6 +2412,36 @@ def calculate_pairwise_distances_pca(df, creator_df=None):
                 'distance': float(norm_distances[i, j])
             })
     return results
+
+@app.route('/api/collaborator-server-status', methods=['GET'])
+def collaborator_server_status():
+    """API endpoint to check collaborator server status - public endpoint"""
+    collaborator_url = "http://localhost:5002"  # Match gui_app.py port
+    status = check_collaborator_server_status(collaborator_url)
+    return jsonify({"status": status, "url": collaborator_url})
+
+@app.route('/api/collaborator-server', methods=['GET'])
+def collaborator_server():
+    """Serve the collaborator server interface via iframe"""
+    current_user, error_response = get_current_user()
+    if error_response:
+        return error_response
+    
+    # Check if collaborator server is running
+    collaborator_url = "http://localhost:5002"  # Match gui_app.py port
+    server_status = check_collaborator_server_status(collaborator_url)
+    
+    return render_template('collaborator_server.html', 
+                         collaborator_url=collaborator_url,
+                         server_status=server_status)
+
+def check_collaborator_server_status(url):
+    """Check if the collaborator server is running"""
+    try:
+        response = requests.get(f"{url}/health", timeout=5)
+        return response.status_code == 200
+    except:
+        return False
 
 if __name__ == '__main__':
     app.run(debug=True)

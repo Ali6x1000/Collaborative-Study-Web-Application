@@ -9,6 +9,7 @@ import json
 import pandas as pd
 import numpy as np
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, send_file
+from flask_cors import CORS  # Add this import
 from werkzeug.utils import secure_filename
 from pca_handler import (
     train_pca_model_handler,
@@ -26,6 +27,7 @@ from metadata_generation_relatedness import (
 )
 
 app = Flask(__name__)
+CORS(app)  # Add this line to enable CORS
 app.secret_key = 'pca_handler_secret_key_2024'
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['OUTPUT_FOLDER'] = 'outputs'
@@ -379,9 +381,24 @@ def list_outputs():
         flash(f'Error listing output files: {str(e)}', 'error')
         return render_template('outputs.html', files=[])
 
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint"""
+    return jsonify({'status': 'healthy', 'service': 'collaborator-server'}), 200
+
+# Update the main run section to use a different port for API mode
 if __name__ == '__main__':
-    print("🚀 Starting PCA Handler GUI Application...")
-    print("📊 Available at: http://localhost:5000")
-    print("🔧 Features: Train Models, Transform Data, Generate Metadata, View Results")
+    import sys
     
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # Check if running in API mode
+    api_mode = '--api' in sys.argv or os.getenv('API_MODE', 'false').lower() == 'true'
+    
+    if api_mode:
+        print("🚀 Starting Collaborator Server API...")
+        print("🔗 API Available at: http://localhost:5002")
+        app.run(host='0.0.0.0', port=5002, debug=False)
+    else:
+        print("🚀 Starting PCA Handler GUI Application...")
+        print("📊 Available at: http://localhost:5002")  # Changed from 5000 to 5002
+        print("🔧 Features: Train Models, Transform Data, Generate Metadata, View Results")
+        app.run(host='0.0.0.0', port=5002, debug=True)

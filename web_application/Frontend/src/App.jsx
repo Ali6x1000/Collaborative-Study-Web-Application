@@ -12,6 +12,7 @@ import CollaborationDetails from './components/Collabrations/CollaborationDetail
 import SessionsResults from "./components/Session/SessionsResults";
 import Profile from "./components/Profile/Profile";
 import StartCollaboration from "./components/Collabrations/StartCollaboration";
+import CollaboratorServer from './components/CollaboratorServer';
 
 function App() {
 
@@ -106,6 +107,7 @@ function App() {
         <Route path="/collaboration/:uuid" element={isLoggedIn ? <CollaborationDetails /> : <Navigate to="/login" />} /> 
         <Route path="/forgot/username" element={<ForgotUsername />} />
         <Route path="/forgot/password" element={<ForgotPassword />} />
+        <Route path="/collaborator-server" element={<CollaboratorServer />} />
       </Routes>
     </Router>
   );
